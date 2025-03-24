@@ -1,0 +1,37 @@
+Gcloud auth login 
+
+Bucket Creation
+G:\GCP>gsutil mb -c standard -l useast-1 gs://gabbarsingh
+G:\GCP>gsutil mb -c standard -l us-east1 gs://sardargabbarsingh
+
+Listing Buckets
+G:\GCP>gsutil ls
+
+copying the file from local
+gsutil cp C:\Users\johis\Desktop\Vaarahi_GCP_DataEngineer\Varint_customer_voice1.csv gs://gabbarsingh
+
+Creation of Datasets
+bq mk -d usecase_2_raw
+bq mk -d usecase_2_refine
+bq mk -d usecase_2_views
+
+listing datasets
+bq ls
+
+stage table(with schema) and loading data
+>bq load --source_format=CSV --skip_leading_rows=1 usecase_2_raw.raw_table gs://gabbarsingh/Varint_customer_voice1.csv DNIS:STRING,contact_key:STRING,direction:STRING,duration:STRING,employee:STRING,employment_login:STRING,employee_id:STRING,local_start_time:STRING,num_of_conferences:STRING,num_of_holds:STRING,num_of_transfers:STRING,PBN_account_customer_number:STRING,pbx_id:STRING,sfe_customer_segment:STRING,sfe_disposition_code:STRING,sfe_employee_id:STRING,sfe_fatca:STRING,sid_key:STRING,total_customer_talk_time:STRING,total_agent_talk_time:STRING,total_hold_time_session_booked:STRING,total_hold_time_session_all:STRING,total_silence_time:STRING,total_talk_over_time:STRING,wrapup_time:STRING,sid:STRING,category_name:STRING,category_key:STRING"
+
+History table
+G:\GCP>bq mk -t usecase_2_refine.refine_table DNIS:INT64,contact_key:STRING,direction:INT64,duration:STRING,employee:STRING,employment_login:STRING,employee_id:INTEGER,local_start_time:STRING,num_of_conferences:INTEGER,num_of_holds:STRING,num_of_transfers:STRING,PBN_account_customer_number:STRING,pbx_id:STRING,sfe_customer_segment:STRING,sfe_disposition_code:STRING,sfe_employee_id:STRING,sfe_fatca:INTEGER,sid_key:STRING,total_customer_talk_time:STRING,total_agent_talk_time:INTEGER,total_hold_time_session_booked:STRING,total_hold_time_session_all:STRING,total_silence_time:STRING,total_talk_over_time:STRING,wrapup_time:STRING,sid:STRING,category_name:STRING,category_key:STRING,load_date:DATE,instance_name:STRING,de_name:STRING
+
+data inserstion to history table
+bq query --use_legacy_sql=false "INSERT INTO usecase_2_refine.refine_table SELECT SAFE_CAST(DNIS AS INTEGER) AS DNIS,contact_key,SAFE_CAST(direction AS INT64) AS direction,duration,employee,employment_login,SAFE_CAST(employee_id AS INT64) AS employee_id,local_start_time,SAFE_CAST(num_of_conferences AS INT64) AS num_of_conferences,num_of_holds,num_of_transfers,PBN_account_customer_number,pbx_id,sfe_customer_segment,sfe_disposition_code,sfe_employee_id,SAFE_CAST(sfe_fatca AS INT64) AS sfe_fatca,sid_key,total_customer_talk_time,SAFE_CAST(total_agent_talk_time AS INT64) AS total_agent_talk_time,total_hold_time_session_booked,total_hold_time_session_all,total_silence_time,total_talk_over_time,wrapup_time,sid,category_name,category_key,CURRENT_DATE() AS load_date,'Direct Qa' AS instance_name,'Srikar.J.Kunta' AS de_name FROM usecase_2_raw.raw_table"
+
+creating views using history table as ref
+bq query --use_legacy_sql=false create view usecase_2_views.debitcard_views as select * from usecase_2_refine.refine_table where category_name=' L: Debit Cards'
+
+views table from views
+>bq query --use_legacy_sql=false "CREATE TABLE usecase_2_views.debitcard_views_table AS SELECT * FROM usecase_2_views.debitcard_views"
+
+Extrating the views and storing it in the bucket
+>bq extract --destination_format=CSV usecase_2_views.debitcard_views_table gs://sardargabbarsingh/debitcard_views.csv

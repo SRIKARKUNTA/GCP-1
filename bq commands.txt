@@ -1,0 +1,6 @@
+BQ COMMANDS 
+
+bq mk -d newdataset : NEW DATASET creation
+bq mk -t newdataset.newtable : NEW TABLE CREATION
+bq rm -t newdataset.newtable : Delete TABLE
+
